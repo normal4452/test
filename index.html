@@ -3,42 +3,594 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test</title>
+  <title>Udon Decode Lab</title>
   <style>
+    :root {
+      --bg: #f4f1e8;
+      --paper: #fffaf0;
+      --ink: #1f2430;
+      --muted: #6f746f;
+      --line: #d6ccb8;
+      --accent: #9b1d20;
+      --accent-2: #1b5e5a;
+      --shadow: 0 20px 50px rgba(42, 36, 25, 0.12);
+      --radius: 22px;
+      --mono: "Cascadia Code", "Consolas", monospace;
+      --sans: "Segoe UI", "Hiragino Sans", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(155, 29, 32, 0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(27, 94, 90, 0.14), transparent 24%),
+        linear-gradient(180deg, #efe8d7 0%, var(--bg) 100%);
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: system-ui, sans-serif;
-      background: linear-gradient(135deg, #4f46e5, #14b8a6);
-      color: white;
     }
-    .card {
-      text-align: center;
-      padding: 3rem 2.5rem;
-      border-radius: 24px;
-      background: rgba(255, 255, 255, 0.12);
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
-      backdrop-filter: blur(12px);
+
+    .wrap {
+      width: min(1080px, calc(100vw - 24px));
+      margin: 0 auto;
+      padding: 18px 0 32px;
     }
+
+    .hero,
+    .panel {
+      background: rgba(255, 250, 240, 0.88);
+      border: 1px solid rgba(214, 204, 184, 0.85);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero {
+      padding: 18px 18px 16px;
+      margin-bottom: 14px;
+    }
+
     h1 {
-      margin: 0 0 1rem;
-      font-size: 3rem;
-      letter-spacing: 0.05em;
-    }
-    p {
       margin: 0;
-      font-size: 1.1rem;
-      opacity: 0.9;
+      font-size: clamp(1.7rem, 3vw, 2.5rem);
+      line-height: 1.05;
+      letter-spacing: 0.02em;
+    }
+
+    .sub {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.97rem;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.12fr 0.88fr;
+      gap: 14px;
+    }
+
+    .panel {
+      padding: 14px;
+    }
+
+    .drop {
+      border: 2px dashed var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      text-align: center;
+      background:
+        linear-gradient(135deg, rgba(155, 29, 32, 0.05), rgba(27, 94, 90, 0.04));
+      transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+      margin-bottom: 12px;
+    }
+
+    .drop.dragover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      background:
+        linear-gradient(135deg, rgba(155, 29, 32, 0.1), rgba(27, 94, 90, 0.08));
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    button,
+    .file-label {
+      appearance: none;
+      border: 1px solid transparent;
+      background: var(--ink);
+      color: #fffaf0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+      transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+
+    button:hover,
+    .file-label:hover {
+      transform: translateY(-1px);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 340px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--ink);
+      font: 13px/1.55 var(--mono);
+    }
+
+    .result {
+      display: grid;
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.64);
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 128px 1fr;
+      gap: 6px 10px;
+      font-size: 0.94rem;
+      line-height: 1.45;
+    }
+
+    .kv div:nth-child(odd) {
+      color: var(--muted);
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      border-radius: 16px;
+      background: #201d18;
+      color: #f7f0df;
+      overflow: auto;
+      font: 12px/1.55 var(--mono);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(27, 94, 90, 0.1);
+      color: var(--accent-2);
+      font-size: 0.84rem;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .warn {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      textarea {
+        min-height: 260px;
+      }
+
+      .kv {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Test</h1>
-    <p>これはGitHub Pages用のシンプルなテストページです。</p>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Udon Decode Lab</h1>
+      <p class="sub">
+        Unity YAML、`serializedPublicVariablesBytesString`、`.uasm.txt` を雑にほどくための簡易ビューアじゃ。
+        ドラッグ&ドロップでも、コピペでも使える。
+      </p>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div id="dropZone" class="drop">
+          <strong>ここに `.txt` / `.asset` / `.unity` を落とす</strong>
+          <div class="muted" style="margin-top:8px;">または下の入力欄にそのまま貼る</div>
+        </div>
+
+        <div class="row">
+          <label class="file-label" for="fileInput">ファイルを選ぶ</label>
+          <input id="fileInput" type="file" accept=".txt,.asset,.unity,.yaml,.yml,.dot">
+          <button id="analyzeBtn">解析</button>
+          <button id="copyDotBtn" class="secondary">DOT をコピー</button>
+          <button id="clearBtn" class="secondary">消す</button>
+        </div>
+
+        <textarea id="sourceInput" spellcheck="false" placeholder="ここに Unity YAML や .uasm.txt を貼るんじゃ"></textarea>
+      </section>
+
+      <section class="panel result">
+        <div class="card">
+          <h2>判定</h2>
+          <div id="summaryTags"></div>
+          <div id="summaryText" class="muted">まだ何も読んでおらぬ。</div>
+        </div>
+
+        <div class="card">
+          <h2>抽出結果</h2>
+          <div id="facts" class="kv"></div>
+        </div>
+
+        <div class="card">
+          <h2>Public Variables</h2>
+          <pre id="publicVarsOut">なし</pre>
+        </div>
+
+        <div class="card">
+          <h2>Graphviz DOT</h2>
+          <pre id="dotOut">.uasm.txt を入れるとここに出る。</pre>
+        </div>
+      </section>
+    </div>
   </div>
+
+  <script>
+    const sourceInput = document.getElementById("sourceInput");
+    const fileInput = document.getElementById("fileInput");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const copyDotBtn = document.getElementById("copyDotBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const dropZone = document.getElementById("dropZone");
+    const summaryTags = document.getElementById("summaryTags");
+    const summaryText = document.getElementById("summaryText");
+    const facts = document.getElementById("facts");
+    const publicVarsOut = document.getElementById("publicVarsOut");
+    const dotOut = document.getElementById("dotOut");
+
+    const UASM_LINE_RE = /^(0x[0-9A-Fa-f]+):\s+([A-Z_]+)(?:,\s*(.+))?$/;
+
+    fileInput.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      sourceInput.value = await file.text();
+      analyze();
+    });
+
+    analyzeBtn.addEventListener("click", analyze);
+
+    clearBtn.addEventListener("click", () => {
+      sourceInput.value = "";
+      renderEmpty();
+    });
+
+    copyDotBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(dotOut.textContent);
+        copyDotBtn.textContent = "コピー済み";
+        setTimeout(() => {
+          copyDotBtn.textContent = "DOT をコピー";
+        }, 1200);
+      } catch {
+        copyDotBtn.textContent = "失敗";
+        setTimeout(() => {
+          copyDotBtn.textContent = "DOT をコピー";
+        }, 1200);
+      }
+    });
+
+    ["dragenter", "dragover"].forEach((type) => {
+      dropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        dropZone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((type) => {
+      dropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("dragover");
+      });
+    });
+
+    dropZone.addEventListener("drop", async (event) => {
+      const file = event.dataTransfer?.files?.[0];
+      if (!file) return;
+      sourceInput.value = await file.text();
+      analyze();
+    });
+
+    function renderEmpty() {
+      summaryTags.innerHTML = "";
+      summaryText.textContent = "まだ何も読んでおらぬ。";
+      facts.innerHTML = "";
+      publicVarsOut.textContent = "なし";
+      dotOut.textContent = ".uasm.txt を入れるとここに出る。";
+    }
+
+    function addFact(key, value) {
+      const k = document.createElement("div");
+      const v = document.createElement("div");
+      k.textContent = key;
+      v.textContent = value;
+      facts.append(k, v);
+    }
+
+    function addTag(text) {
+      const span = document.createElement("span");
+      span.className = "tag";
+      span.textContent = text;
+      summaryTags.appendChild(span);
+    }
+
+    function analyze() {
+      const text = sourceInput.value.trim();
+      if (!text) {
+        renderEmpty();
+        return;
+      }
+
+      summaryTags.innerHTML = "";
+      facts.innerHTML = "";
+      publicVarsOut.textContent = "なし";
+      dotOut.textContent = ".uasm.txt を入れるとここに出る。";
+
+      const isUasm = /^0x[0-9A-Fa-f]+:\s+[A-Z_]+/m.test(text);
+      const isUnityYaml = /^%YAML/m.test(text) || /MonoBehaviour:/m.test(text);
+      const isPublicDecoded = /^\s*_[A-Za-z0-9]+\s*:\s*[A-Za-z0-9_.\[\]]+\s*=/m.test(text);
+
+      if (isUnityYaml) addTag("Unity YAML");
+      if (isUasm) addTag("UASM");
+      if (isPublicDecoded) addTag("Decoded Public Vars");
+      if (!isUnityYaml && !isUasm && !isPublicDecoded) addTag("Plain Text");
+
+      const yamlInfo = isUnityYaml ? parseUnityYaml(text) : null;
+      const graphInfo = isUasm ? buildGraphviz(text) : null;
+
+      if (yamlInfo) {
+        summaryText.textContent = yamlInfo.summary;
+        addYamlFacts(yamlInfo);
+      } else if (graphInfo) {
+        summaryText.textContent = "UASM から制御フローを DOT にしたぞ。";
+      } else if (isPublicDecoded) {
+        summaryText.textContent = "公開変数っぽい行をそのまま表示しておる。";
+      } else {
+        summaryText.innerHTML = '<span class="warn">型を断言できぬ。</span> ただしコピペ置き場としては使える。';
+      }
+
+      if (yamlInfo?.publicSection) {
+        publicVarsOut.textContent = yamlInfo.publicSection;
+      } else if (isPublicDecoded) {
+        publicVarsOut.textContent = text;
+      }
+
+      if (graphInfo) {
+        dotOut.textContent = graphInfo.dot;
+        addFact("basic blocks", String(graphInfo.blockCount));
+        addFact("edges", String(graphInfo.edgeCount));
+      }
+    }
+
+    function parseUnityYaml(text) {
+      const fileIdMatch = text.match(/serializedProgramAsset:\s*\{fileID:\s*(\d+),\s*guid:\s*([0-9a-f]+),\s*type:\s*(\d+)\}/i);
+      const scriptGuidMatch = text.match(/m_Script:\s*\{fileID:\s*11500000,\s*guid:\s*([0-9a-f]+),/i);
+      const nameMatch = text.match(/m_Name:\s*("?)(.+?)\1\s*$/m);
+      const bytesStringMatch = text.match(/serializedPublicVariablesBytesString:\s*(.*)$/m);
+      const objectRefsSizeMatch = text.match(/publicVariablesUnityEngineObjects:\s*\n(?:\s+.*\n)*?\s*size\s*=\s*(\d+)/i)
+        || text.match(/publicVariablesUnityEngineObjects:\s*\[\]/i);
+      const compressedCount = [...text.matchAll(/serializedProgramCompressedBytes:\s*(?:\n\s*-\s*\d+)+/g)].length > 0
+        ? (text.match(/serializedProgramCompressedBytes:/) ? countYamlByteList(text, "serializedProgramCompressedBytes:") : 0)
+        : 0;
+
+      const publicSection = buildPublicVarsView(text, bytesStringMatch);
+
+      let summary = "Unity YAML を読んだ。";
+      if (bytesStringMatch && bytesStringMatch[1].trim()) {
+        summary = "UdonBehaviour 側の public variables が見えておる。";
+      } else if (compressedCount > 0) {
+        summary = "SerializedUdonProgramAsset 本体っぽい。compressed bytes を持っておる。";
+      }
+
+      return {
+        summary,
+        name: nameMatch?.[2] ?? "",
+        serializedProgramAsset: fileIdMatch ? `${fileIdMatch[2]} (fileID ${fileIdMatch[1]})` : "",
+        scriptGuid: scriptGuidMatch?.[1] ?? "",
+        publicBytesLength: bytesStringMatch?.[1]?.trim()?.length ?? 0,
+        objectRefsSize: objectRefsSizeMatch ? (objectRefsSizeMatch[1] ?? "0") : "",
+        compressedCount,
+        publicSection
+      };
+    }
+
+    function addYamlFacts(info) {
+      if (info.name) addFact("m_Name", info.name);
+      if (info.serializedProgramAsset) addFact("serializedProgramAsset", info.serializedProgramAsset);
+      if (info.scriptGuid) addFact("m_Script guid", info.scriptGuid);
+      if (info.publicBytesLength) addFact("public vars bytes", String(info.publicBytesLength));
+      if (info.objectRefsSize !== "") addFact("object refs", String(info.objectRefsSize));
+      if (info.compressedCount) addFact("compressed bytes", String(info.compressedCount));
+    }
+
+    function buildPublicVarsView(text, bytesStringMatch) {
+      const lines = [];
+      const startDate = text.match(/_StartDateString\s*:\s*System\.String\[\]\s*=\s*(.+)$/m);
+      const timeline = text.match(/_Timeline\s*:\s*UnityEngine\.Playables\.PlayableDirector\s*=\s*(.+)$/m);
+
+      if (startDate) lines.push(startDate[0]);
+      if (timeline) lines.push(timeline[0]);
+
+      if (lines.length) return lines.join("\n");
+
+      if (bytesStringMatch) {
+        const raw = bytesStringMatch[1].trim();
+        if (!raw) return "serializedPublicVariablesBytesString は空じゃ。";
+        return [
+          "serializedPublicVariablesBytesString を見つけた。",
+          "",
+          raw.length > 260 ? raw.slice(0, 260) + " ..." : raw
+        ].join("\n");
+      }
+
+      return "";
+    }
+
+    function countYamlByteList(text, anchor) {
+      const idx = text.indexOf(anchor);
+      if (idx < 0) return 0;
+      const tail = text.slice(idx + anchor.length).split("\n");
+      let count = 0;
+      for (const raw of tail) {
+        const line = raw.trim();
+        if (!line.startsWith("- ")) break;
+        count += 1;
+      }
+      return count;
+    }
+
+    function buildGraphviz(text) {
+      const insns = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .map((line) => line.match(UASM_LINE_RE))
+        .filter(Boolean)
+        .map((m) => ({
+          addr: m[1],
+          op: m[2],
+          arg: m[3] ? m[3].trim() : null
+        }));
+
+      if (!insns.length) {
+        return null;
+      }
+
+      const addrToIdx = new Map(insns.map((ins, idx) => [ins.addr, idx]));
+      const leaders = new Set([insns[0].addr]);
+
+      insns.forEach((ins, idx) => {
+        if ((ins.op === "JUMP" || ins.op === "JUMP_IF_FALSE") && ins.arg?.startsWith("0x")) {
+          leaders.add(ins.arg);
+          if (insns[idx + 1]) leaders.add(insns[idx + 1].addr);
+        } else if (ins.op === "JUMP_INDIRECT" && insns[idx + 1]) {
+          leaders.add(insns[idx + 1].addr);
+        }
+      });
+
+      const leaderList = [...leaders].sort((a, b) => addrToIdx.get(a) - addrToIdx.get(b));
+      const blocks = leaderList.map((leader, idx) => {
+        const start = addrToIdx.get(leader);
+        const end = idx + 1 < leaderList.length ? addrToIdx.get(leaderList[idx + 1]) : insns.length;
+        return {
+          id: leader,
+          insns: insns.slice(start, end)
+        };
+      });
+
+      const addrToBlock = new Map();
+      blocks.forEach((block) => {
+        block.insns.forEach((ins) => addrToBlock.set(ins.addr, block.id));
+      });
+
+      const addrToNext = new Map();
+      insns.forEach((ins, idx) => {
+        addrToNext.set(ins.addr, insns[idx + 1]?.addr ?? null);
+      });
+
+      const edges = [];
+      blocks.forEach((block) => {
+        const last = block.insns[block.insns.length - 1];
+        if (last.op === "JUMP" && addrToBlock.has(last.arg)) {
+          edges.push([block.id, addrToBlock.get(last.arg), "jump"]);
+          return;
+        }
+        if (last.op === "JUMP_IF_FALSE") {
+          if (addrToBlock.has(last.arg)) edges.push([block.id, addrToBlock.get(last.arg), "false"]);
+          const next = addrToNext.get(last.addr);
+          if (addrToBlock.has(next)) edges.push([block.id, addrToBlock.get(next), "true"]);
+          return;
+        }
+        if (last.op === "JUMP_INDIRECT") {
+          return;
+        }
+        const next = addrToNext.get(last.addr);
+        if (addrToBlock.has(next)) edges.push([block.id, addrToBlock.get(next), ""]);
+      });
+
+      const uniqueEdges = [];
+      const seen = new Set();
+      edges.forEach((edge) => {
+        const key = edge.join("|");
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueEdges.push(edge);
+        }
+      });
+
+      const dotLines = [
+        "digraph UdonCFG {",
+        "  rankdir=TB;",
+        '  node [shape=box, fontname="Consolas"];'
+      ];
+
+      blocks.forEach((block) => {
+        dotLines.push(`  "${block.id}";`);
+      });
+
+      uniqueEdges.forEach(([src, dst, label]) => {
+        if (label) {
+          dotLines.push(`  "${src}" -> "${dst}" [label="${label}"];`);
+        } else {
+          dotLines.push(`  "${src}" -> "${dst}";`);
+        }
+      });
+
+      dotLines.push("}");
+
+      return {
+        dot: dotLines.join("\n"),
+        blockCount: blocks.length,
+        edgeCount: uniqueEdges.length
+      };
+    }
+
+    renderEmpty();
+  </script>
 </body>
 </html>
